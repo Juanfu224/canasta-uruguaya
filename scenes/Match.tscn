@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://bp6b8c8fcngt7"]
+[gd_scene format=3 uid="uid://b5canasta0match0scn"]
 
-[ext_resource type="Script" path="res://scenes/match_offline.gd" id="1_match"]
+[ext_resource type="Script" path="res://scenes/match.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://ui/hand_layout.tscn" id="2_hand"]
 [ext_resource type="PackedScene" path="res://ui/pozo_view.tscn" id="3_pozo"]
 [ext_resource type="PackedScene" path="res://ui/deck_view.tscn" id="4_deck"]
@@ -16,7 +16,7 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[node name="MatchOffline" type="Control"]
+[node name="Match" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

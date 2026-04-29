@@ -26,11 +26,17 @@ const _CARD_SCENE: PackedScene = preload("res://ui/card_ui.tscn")
 
 var _top_card_node: CardUI = null
 var _count: int = 0
+var _border_style: StyleBoxFlat = null
 
 
 func _ready() -> void:
 	_drop.accept_kind = "discard"
 	_drop.card_dropped.connect(_on_card_dropped)
+	# Duplicamos el StyleBox para no mutar el SubResource compartido entre
+	# instancias (cada PozoView tiene su propio borde).
+	var src: StyleBox = _status_border.get_theme_stylebox("panel")
+	_border_style = (src.duplicate() if src is StyleBoxFlat else StyleBoxFlat.new()) as StyleBoxFlat
+	_status_border.add_theme_stylebox_override("panel", _border_style)
 	set_status(PozoStatus.NORMAL)
 
 
@@ -56,6 +62,8 @@ func set_count(n: int) -> void:
 
 
 func set_status(status: int) -> void:
+	if _border_style == null:
+		return
 	var col: Color
 	match status:
 		PozoStatus.TAPONADO:
@@ -64,7 +72,7 @@ func set_status(status: int) -> void:
 			col = Color(0.92, 0.78, 0.20, 0.85)
 		_:
 			col = Color(0.40, 0.40, 0.45, 0.50)
-	(_status_border.get_theme_stylebox("panel") as StyleBoxFlat).border_color = col
+	_border_style.border_color = col
 	_status_border.queue_redraw()
 
 

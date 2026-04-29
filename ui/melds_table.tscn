@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dthq5s3t7r87c"]
 
 [ext_resource type="Script" path="res://ui/melds_table.gd" id="1_melds"]
-[ext_resource type="PackedScene" uid="uid://b3canasta0dropzone" path="res://ui/drop_zone.tscn" id="2_dz"]
+[ext_resource type="PackedScene" path="res://ui/drop_zone.tscn" id="2_dz"]
 
 [node name="MeldsTable" type="Control"]
 custom_minimum_size = Vector2(680, 200)

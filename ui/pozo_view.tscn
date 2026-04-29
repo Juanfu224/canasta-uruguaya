@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://2u47g7vuvkuo"]
 
 [ext_resource type="Script" path="res://ui/pozo_view.gd" id="1_pozo"]
-[ext_resource type="PackedScene" uid="uid://b3canasta0dropzone" path="res://ui/drop_zone.tscn" id="2_dropzone"]
+[ext_resource type="PackedScene" path="res://ui/drop_zone.tscn" id="2_dropzone"]
 
 [sub_resource type="StyleBoxFlat" id="SBox_Status"]
 bg_color = Color(0, 0, 0, 0)

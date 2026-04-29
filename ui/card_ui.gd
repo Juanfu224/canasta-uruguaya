@@ -69,6 +69,10 @@ const _RANK_GLYPH := ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q
 ## muestra al iniciar drag.
 @export_range(1.0, 1.5, 0.05) var hover_scale: float = 1.12
 
+## Si está activo, se añade `CardHoverOscillator` como hijo para FX táctil.
+## Desactivable para `RemoteHand` (cartas de oponente) donde no hay input.
+@export var enable_hover_fx: bool = true
+
 # ---------------------------------------------------------------------------
 # Estado
 # ---------------------------------------------------------------------------
@@ -104,6 +108,18 @@ func _ready() -> void:
 	# Drag&drop unifica táctil + ratón en Godot 4 si emulate_mouse_from_touch
 	# está desactivado y use_accumulated_input=false (configurado en main.gd).
 	_render_face()
+	if enable_hover_fx and face_up:
+		_attach_hover_oscillator()
+
+
+func _attach_hover_oscillator() -> void:
+	# Evita duplicarlo si ya existe (por reuso del nodo).
+	if has_node(^"HoverOscillator"):
+		return
+	var osc: CardHoverOscillator = CardHoverOscillator.new()
+	osc.name = "HoverOscillator"
+	osc.hover_scale = hover_scale
+	add_child(osc)
 
 
 # ---------------------------------------------------------------------------

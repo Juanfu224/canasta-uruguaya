@@ -24,7 +24,15 @@ func _ready() -> void:
 
 	# Lanzador opcional de la escena de QA visual de F3. Activar con:
 	#   godot --path . -- --match-offline
-	# Mantenido fuera del flujo normal hasta que el menú principal exista.
+	# Si no se pide QA, cargamos el menú principal (F4).
 	if "--match-offline" in OS.get_cmdline_user_args():
 		print("[Main] Cargando escena de QA: MatchOffline")
-		get_tree().change_scene_to_file("res://scenes/MatchOffline.tscn")
+		_change_scene.call_deferred("res://scenes/MatchOffline.tscn")
+	else:
+		_change_scene.call_deferred("res://scenes/Menu.tscn")
+
+
+func _change_scene(path: String) -> void:
+	var err: int = get_tree().change_scene_to_file(path)
+	if err != OK:
+		push_error("Main: error cargando %s (%d)" % [path, err])

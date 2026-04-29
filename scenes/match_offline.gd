@@ -17,6 +17,8 @@
 extends Control
 
 const _INITIAL_HAND_SIZE: int = 11
+const _SCORE_POPUP_SCENE: PackedScene = preload("res://ui/score_popup.tscn")
+const _LOADING_FLUID_SCENE: PackedScene = preload("res://ui/transitions/loading_fluid.tscn")
 
 @onready var _local_hand: HandLayout = $LocalHand
 @onready var _remote_hand_top: HandLayout = $RemoteHandTop
@@ -45,6 +47,77 @@ func _ready() -> void:
 
 	_deal_initial_hands()
 	_update_info()
+	_build_qa_toolbar()
+
+
+# ---------------------------------------------------------------------------
+# QA Toolbar (F4): sólo en escena offline. En F5 se reemplaza por HUD real.
+# ---------------------------------------------------------------------------
+
+func _build_qa_toolbar() -> void:
+	var bar: HBoxContainer = HBoxContainer.new()
+	bar.name = "QAToolbar"
+	bar.position = Vector2(16, 16)
+	bar.add_theme_constant_override("separation", 8)
+	add_child(bar)
+
+	var btn_menu: Button = Button.new()
+	btn_menu.text = "← Menú"
+	btn_menu.custom_minimum_size = Vector2(110, 40)
+	btn_menu.pressed.connect(_on_back_to_menu)
+	bar.add_child(btn_menu)
+
+	var btn_score: Button = Button.new()
+	btn_score.text = "Test puntaje"
+	btn_score.custom_minimum_size = Vector2(140, 40)
+	btn_score.pressed.connect(_on_test_score_popup)
+	bar.add_child(btn_score)
+
+
+func _on_back_to_menu() -> void:
+	var transition: LoadingFluid = _LOADING_FLUID_SCENE.instantiate() as LoadingFluid
+	add_child(transition)
+	await transition.play_in(0.4)
+	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+
+
+func _on_test_score_popup() -> void:
+	var popup: ScorePopup = _SCORE_POPUP_SCENE.instantiate() as ScorePopup
+	add_child(popup)
+	var payload: Dictionary = {
+		"title": "Resultado de la mano (demo)",
+		"teams": [
+			{
+				"team_id": 1,
+				"label": "Equipo Rojo",
+				"rows": [
+					{"label": "Canasta pura", "value": GameConfig.CANASTA_PURE_BONUS},
+					{"label": "Canasta impura", "value": GameConfig.CANASTA_IMPURE_BONUS},
+					{"label": "Canasta de ases pura", "value": GameConfig.CANASTA_ACES_PURE_BONUS},
+					{"label": "Treses rojos (3)", "value": GameConfig.RED_THREE_BONUS * 3},
+					{"label": "Cartas en mesa", "value": 285},
+					{"label": "Cartas en mano", "value": -120},
+				],
+				"hand_total": 1965,
+				"cumulative_before": 1500,
+				"cumulative_after": 3465,
+			},
+			{
+				"team_id": 2,
+				"label": "Equipo Azul",
+				"rows": [
+					{"label": "Canasta impura", "value": GameConfig.CANASTA_IMPURE_BONUS},
+					{"label": "Cartas en mesa", "value": 140},
+					{"label": "Robo fuera de orden", "value": GameConfig.DRAW_OUT_OF_ORDER_PENALTY},
+					{"label": "Cartas en mano", "value": -260},
+				],
+				"hand_total": -20,
+				"cumulative_before": 1820,
+				"cumulative_after": 1800,
+			},
+		],
+	}
+	popup.play(payload)
 
 
 func _deal_initial_hands() -> void:
@@ -114,6 +187,9 @@ func _on_extend_meld_requested(meld_index: int, card_id: int, _source: NodePath)
 	else:
 		meld.naturals += 1
 	_melds.render_melds(_visible_melds)
+	# F4: feedback al completar canasta (≥7 cartas).
+	if meld.cards.size() == 7:
+		ScreenShake.shake(_melds, 10.0, 0.25)
 
 
 func _find_card_in_local_hand(card_id: int) -> Card:

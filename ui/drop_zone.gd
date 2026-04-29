@@ -25,7 +25,7 @@ const _PAYLOAD_TYPE: String = "card"
 ## Si está activo, resalta visualmente el área cuando un drag está sobre ella.
 @export var highlight_on_hover: bool = true
 
-@onready var _highlight: ColorRect = $Highlight if has_node("Highlight") else null
+@onready var _highlight: ColorRect = get_node_or_null("Highlight") as ColorRect
 
 
 func _ready() -> void:
