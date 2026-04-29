@@ -1,0 +1,149 @@
+[gd_scene load_steps=7 format=3 uid="uid://b3canasta0cardui"]
+
+[ext_resource type="Script" path="res://ui/card_ui.gd" id="1_cardui"]
+
+[sub_resource type="StyleBoxFlat" id="SBox_Face"]
+bg_color = Color(0.97, 0.97, 0.94, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.15, 0.15, 0.17, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_size = 0
+
+[sub_resource type="StyleBoxFlat" id="SBox_Back"]
+bg_color = Color(0.18, 0.28, 0.55, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.92, 0.86, 0.55, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LS_Rank"]
+font_size = 22
+
+[sub_resource type="LabelSettings" id="LS_Suit"]
+font_size = 64
+
+[sub_resource type="LabelSettings" id="LS_RankBottom"]
+font_size = 22
+
+[node name="CardUI" type="Control"]
+custom_minimum_size = Vector2(120, 168)
+offset_right = 120.0
+offset_bottom = 168.0
+pivot_offset = Vector2(60, 84)
+mouse_filter = 0
+script = ExtResource("1_cardui")
+
+[node name="Shadow" type="ColorRect" parent="."]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 8.0
+offset_right = 4.0
+offset_bottom = 8.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.28)
+
+[node name="Face" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SBox_Face")
+
+[node name="Margin" type="MarginContainer" parent="Face"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="Layout" type="Control" parent="Face/Margin"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RankTop" type="Label" parent="Face/Margin/Layout"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -50.0
+offset_right = 50.0
+offset_bottom = 30.0
+grow_horizontal = 2
+mouse_filter = 2
+text = "A"
+label_settings = SubResource("LS_Rank")
+horizontal_alignment = 0
+vertical_alignment = 0
+
+[node name="SuitCenter" type="Label" parent="Face/Margin/Layout"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+text = "♠"
+label_settings = SubResource("LS_Suit")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RankBottom" type="Label" parent="Face/Margin/Layout"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -50.0
+offset_top = -30.0
+offset_right = 50.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+rotation = 3.14159
+pivot_offset = Vector2(50, 15)
+text = "A"
+label_settings = SubResource("LS_RankBottom")
+horizontal_alignment = 0
+vertical_alignment = 0
+
+[node name="Back" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SBox_Back")
+
+[node name="BackEmblem" type="Label" parent="Back"]
+layout_mode = 2
+mouse_filter = 2
+text = "★"
+label_settings = SubResource("LS_Suit")
+horizontal_alignment = 1
+vertical_alignment = 1

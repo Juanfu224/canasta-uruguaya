@@ -10,7 +10,7 @@ func _enter(state: MatchState) -> void:
 		var ts: TeamState = team
 		var is_closer: bool = (state.closer_player_id != -1
 			and state.team_of(state.closer_player_id).team_id == ts.team_id)
-		var closed_in_hand: bool = is_closer and _closer_has_no_cards(state)
+		var closed_in_hand: bool = is_closer and state.closer_closed_in_hand
 		var black_threes: int = _count_black_threes_in_hands(state)
 		var hands_for_team: Array = []
 		for p in range(state.config.n_players):
@@ -38,19 +38,15 @@ func _process(state: MatchState) -> Script:
 	for p in range(state.config.n_players):
 		state.hands[p] = ([] as Array[Card])
 	state.deck = Deck.build_standard_108()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = state.config.seed + state.teams[0].cumulative_score + state.teams[1].cumulative_score
-	state.deck.shuffle(rng)
+	# Semilla criptográficamente segura para cada nueva mano.
+	RngService.start_match(0)
+	state.deck.shuffle(RngService.match_rng)
 	state.pozo = null
 	state.hand_finished = false
 	state.closer_player_id = -1
+	state.closer_closed_in_hand = false
 	state.current_player = (state.current_player + 1) % state.config.n_players
 	return load("res://fsm/states/state_setup_pozo.gd") as Script
-
-func _closer_has_no_cards(state: MatchState) -> bool:
-	if state.closer_player_id == -1:
-		return false
-	return (state.hands[state.closer_player_id] as Array).is_empty()
 
 func _count_black_threes_in_hands(state: MatchState) -> int:
 	var n: int = 0

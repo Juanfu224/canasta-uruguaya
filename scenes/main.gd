@@ -21,3 +21,10 @@ func _ready() -> void:
 	deck.shuffle(RngService.match_rng)
 	assert(deck.size() == GameConfig.TOTAL_CARDS, "Deck inválido")
 	print("[Main] Deck OK (%d cartas)" % deck.size())
+
+	# Lanzador opcional de la escena de QA visual de F3. Activar con:
+	#   godot --path . -- --match-offline
+	# Mantenido fuera del flujo normal hasta que el menú principal exista.
+	if "--match-offline" in OS.get_cmdline_user_args():
+		print("[Main] Cargando escena de QA: MatchOffline")
+		get_tree().change_scene_to_file("res://scenes/MatchOffline.tscn")

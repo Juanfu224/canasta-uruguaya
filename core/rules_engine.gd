@@ -331,12 +331,15 @@ static func can_close(state: MatchState, player_id: int) -> RuleResult:
 
 
 ## Marca la mano como cerrada por el jugador. Pre: `can_close` ok.
-static func execute_close(state: MatchState, player_id: int) -> RuleResult:
+## `in_hand`: pasar `true` si el equipo NO había abierto al comienzo de este
+## turno (cierre en mano = bono extra de 200 pts al calcular puntaje).
+static func execute_close(state: MatchState, player_id: int, in_hand: bool = false) -> RuleResult:
 	var v: RuleResult = can_close(state, player_id)
 	if not v.ok:
 		return v
 	state.hand_finished = true
 	state.closer_player_id = player_id
+	state.closer_closed_in_hand = in_hand
 	return RuleResult.success()
 
 

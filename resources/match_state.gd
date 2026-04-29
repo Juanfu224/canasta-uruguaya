@@ -36,6 +36,10 @@ var pozo: PozoController
 ## Identidad del jugador que cerró la mano (-1 si nadie cerró).
 @export var closer_player_id: int = -1
 
+## True si el equipo del jugador que cerró no había abierto antes de ese turno
+## ("cierre en mano"). Lo establece `RulesEngine.execute_close`.
+@export var closer_closed_in_hand: bool = false
+
 
 static func create(cfg: MatchConfig) -> MatchState:
 	var s: MatchState = MatchState.new()

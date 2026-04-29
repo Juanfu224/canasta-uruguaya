@@ -9,9 +9,8 @@ func _enter(state: MatchState) -> void:
 	# si aún no existe.
 	if state.deck == null:
 		state.deck = Deck.build_standard_108()
-		var rng := RandomNumberGenerator.new()
-		rng.seed = state.config.seed
-		state.deck.shuffle(rng)
+		RngService.start_match(state.config.seed)
+		state.deck.shuffle(RngService.match_rng)
 
 func _process(_state: MatchState) -> Script:
 	return load("res://fsm/states/state_setup_pozo.gd") as Script

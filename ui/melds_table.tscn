@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dthq5s3t7r87c"]
+
+[ext_resource type="Script" path="res://ui/melds_table.gd" id="1_melds"]
+[ext_resource type="PackedScene" uid="uid://b3canasta0dropzone" path="res://ui/drop_zone.tscn" id="2_dz"]
+
+[node name="MeldsTable" type="Control"]
+custom_minimum_size = Vector2(680, 200)
+mouse_filter = 1
+script = ExtResource("1_melds")
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -180.0
+horizontal_scroll_mode = 2
+vertical_scroll_mode = 0
+
+[node name="Row" type="HBoxContainer" parent="Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="NewMeldZone" parent="." instance=ExtResource("2_dz")]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -100.0
+offset_right = -8.0
+offset_bottom = 100.0
+grow_horizontal = 0
+grow_vertical = 2
+accept_kind = "meld_create"

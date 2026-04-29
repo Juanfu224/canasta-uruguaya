@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://2u464bkv0q35"]
+
+[ext_resource type="Script" path="res://ui/drop_zone.gd" id="1_dropzone"]
+
+[sub_resource type="StyleBoxFlat" id="SBox_Zone"]
+bg_color = Color(0.10, 0.10, 0.13, 0.40)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.92, 0.86, 0.55, 0.55)
+border_blend = true
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="DropZone" type="Control"]
+custom_minimum_size = Vector2(160, 220)
+mouse_filter = 1
+script = ExtResource("1_dropzone")
+
+[node name="Panel" type="PanelContainer" parent="."]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SBox_Zone")
+
+[node name="Label" type="Label" parent="Panel"]
+layout_mode = 2
+mouse_filter = 2
+text = "Drop"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Highlight" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.92, 0.86, 0.55, 0.30)

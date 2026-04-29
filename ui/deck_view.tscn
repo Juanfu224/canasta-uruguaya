@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://2u463v7qvkuo"]
+
+[ext_resource type="Script" path="res://ui/deck_view.gd" id="1_deck"]
+
+[node name="DeckView" type="Control"]
+custom_minimum_size = Vector2(150, 220)
+mouse_filter = 1
+script = ExtResource("1_deck")
+
+[node name="Stack" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -60.0
+offset_top = -84.0
+offset_right = 60.0
+offset_bottom = 84.0
+mouse_filter = 2
+
+[node name="HitArea" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+flat = true
+
+[node name="CountLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = 28.0
+grow_horizontal = 0
+mouse_filter = 2
+text = "0"
+horizontal_alignment = 2

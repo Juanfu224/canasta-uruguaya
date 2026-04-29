@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://hqptv38x8ai4"]
+
+[ext_resource type="Script" path="res://ui/hand_layout.gd" id="1_hand"]
+
+[node name="HandLayout" type="Control"]
+custom_minimum_size = Vector2(680, 220)
+offset_right = 680.0
+offset_bottom = 220.0
+mouse_filter = 1
+script = ExtResource("1_hand")
