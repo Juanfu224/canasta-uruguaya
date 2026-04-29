@@ -3,25 +3,28 @@
 importer="font_data_dynamic"
 type="FontFile"
 uid="uid://bq576idtgkcvs"
-path="res://.godot/imported/Signika-SemiBold.ttf-846e4b7a001627200a70e2db4f07314c.fontdata"
+path="res://.godot/imported/Signika-SemiBold.ttf-bfb8dd78a4dc1f63b430cbd261cb0236.fontdata"
 
 [deps]
 
-source_file="res://scenes/shared/fonts/signika/Signika-SemiBold.ttf"
-dest_files=["res://.godot/imported/Signika-SemiBold.ttf-846e4b7a001627200a70e2db4f07314c.fontdata"]
+source_file="res://docs/balatro/scenes/shared/fonts/signika/Signika-SemiBold.ttf"
+dest_files=["res://.godot/imported/Signika-SemiBold.ttf-bfb8dd78a4dc1f63b430cbd261cb0236.fontdata"]
 
 [params]
 
 Rendering=null
 antialiasing=1
 generate_mipmaps=false
+disable_embedded_bitmaps=true
 multichannel_signed_distance_field=false
 msdf_pixel_range=8
 msdf_size=48
 allow_system_fallback=true
 force_autohinter=false
+modulate_color_glyphs=false
 hinting=1
 subpixel_positioning=1
+keep_rounding_remainders=true
 oversampling=0.0
 Fallbacks=null
 fallbacks=[]

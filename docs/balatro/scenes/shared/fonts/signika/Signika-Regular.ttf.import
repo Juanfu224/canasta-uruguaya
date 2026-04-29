@@ -3,25 +3,28 @@
 importer="font_data_dynamic"
 type="FontFile"
 uid="uid://dec5ome6qoy4"
-path="res://.godot/imported/Signika-Regular.ttf-8ab9fa2314070e891d8be8a486ec4021.fontdata"
+path="res://.godot/imported/Signika-Regular.ttf-a0d09f8fd9cdc0462630ed7ffc51c1c6.fontdata"
 
 [deps]
 
-source_file="res://scenes/shared/fonts/signika/Signika-Regular.ttf"
-dest_files=["res://.godot/imported/Signika-Regular.ttf-8ab9fa2314070e891d8be8a486ec4021.fontdata"]
+source_file="res://docs/balatro/scenes/shared/fonts/signika/Signika-Regular.ttf"
+dest_files=["res://.godot/imported/Signika-Regular.ttf-a0d09f8fd9cdc0462630ed7ffc51c1c6.fontdata"]
 
 [params]
 
 Rendering=null
 antialiasing=1
 generate_mipmaps=false
+disable_embedded_bitmaps=true
 multichannel_signed_distance_field=false
 msdf_pixel_range=8
 msdf_size=48
 allow_system_fallback=true
 force_autohinter=false
+modulate_color_glyphs=false
 hinting=1
 subpixel_positioning=1
+keep_rounding_remainders=true
 oversampling=0.0
 Fallbacks=null
 fallbacks=[]
