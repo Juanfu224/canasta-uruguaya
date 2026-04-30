@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" path="res://ui/pozo_view.tscn" id="3_pozo"]
 [ext_resource type="PackedScene" path="res://ui/deck_view.tscn" id="4_deck"]
 [ext_resource type="PackedScene" path="res://ui/melds_table.tscn" id="5_melds"]
+[ext_resource type="PackedScene" path="res://ui/hud/top_hud.tscn" id="7_top"]
+[ext_resource type="PackedScene" path="res://ui/hud/bottom_hud.tscn" id="8_bot"]
 
 [sub_resource type="StyleBoxFlat" id="SBox_Bg"]
 bg_color = Color(0.07, 0.10, 0.12, 1.0)
@@ -137,15 +139,40 @@ offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="InfoLabel" type="Label" parent="."]
+[node name="HudLayer" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="TopHud" parent="HudLayer" instance=ExtResource("7_top")]
+
+[node name="BottomHud" parent="HudLayer" instance=ExtResource("8_bot")]
+
+[node name="BottomActionBar" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 2
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = -36.0
-offset_right = 400.0
+offset_left = -260.0
+offset_top = -56.0
+offset_right = 260.0
 offset_bottom = -8.0
+grow_horizontal = 2
 grow_vertical = 0
-text = "—"
-theme_override_colors/font_color = Color(0.85, 0.85, 0.78, 1)
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="BtnPasar" type="Button" parent="BottomActionBar"]
+layout_mode = 2
+text = "Pasar"
+disabled = true
+
+[node name="BtnCapturar" type="Button" parent="BottomActionBar"]
+layout_mode = 2
+text = "Capturar"
+disabled = true
+
+[node name="BtnCerrar" type="Button" parent="BottomActionBar"]
+layout_mode = 2
+text = "Cerrar"
+disabled = true

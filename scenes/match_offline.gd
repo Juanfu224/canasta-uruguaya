@@ -41,6 +41,14 @@ var _layout: MatchLayout = null
 
 
 func _ready() -> void:
+	# Esta escena es solo QA visual (no autoritativa). Sólo permitirla bajo
+	# el flag CLI `--match-offline-qa` para evitar que el flujo de menú la
+	# alcance accidentalmente.
+	var args: PackedStringArray = OS.get_cmdline_args()
+	if not args.has("--match-offline-qa"):
+		push_warning("MatchOffline solo disponible con --match-offline-qa; redirigiendo a Menu")
+		get_tree().change_scene_to_file.call_deferred("res://scenes/Menu.tscn")
+		return
 	if RngService.current_match_seed == 0:
 		RngService.start_match(0)
 	_deck_logic = Deck.build_standard_108()

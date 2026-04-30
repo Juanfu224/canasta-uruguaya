@@ -56,6 +56,7 @@ var _uuid_to_player: Dictionary = {}
 
 var _revision: int = 0
 var _started: bool = false
+var _ended: bool = false
 
 ## player_id → ticks_msec en que el peer se desconectó (-1 = no desconectado).
 ## Si pasa `BOT_TAKEOVER_TIMEOUT_S` segundos sin reconexión, se asigna
@@ -135,17 +136,26 @@ func start_match() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _started and not match_state.match_finished:
+	if not _started or _ended:
+		return
+	if not match_state.match_finished:
 		# Tick "vacío" sólo si el estado puede transicionar sin acción del
 		# jugador (p.ej. RoundEnd → SetupPozo). Estados que esperan acción
 		# (DrawPhase, PlayPhase, DiscardPhase) son no-op aquí.
 		_tick_until_stable()
 		_check_takeover()
-		if match_state.match_finished:
-			_revision += 1
-			rpc_router.rpc("notify_action_resolved", "match_end", {}, _revision)
-			match_ended.emit()
-			Reconnection.delete_for(match_id)
+	if match_state.match_finished:
+		_finalize_match()
+
+
+func _finalize_match() -> void:
+	if _ended:
+		return
+	_ended = true
+	_revision += 1
+	rpc_router.rpc("notify_action_resolved", "match_end", {}, _revision)
+	match_ended.emit()
+	Reconnection.delete_for(match_id)
 
 
 func _tick_until_stable() -> void:
@@ -324,6 +334,10 @@ func on_action_resolved(kind: String, player_id: int, payload: Dictionary) -> vo
 		)
 		_reconnection.save_throttled(snap)
 
+	# Si la acción provocó fin de partida, emitir señal autoritativa.
+	if match_state.match_finished:
+		_finalize_match()
+
 
 # ---------------------------------------------------------------------------
 # Snapshot / mano privada
@@ -364,9 +378,6 @@ func _send_private_hand_to_player(player_id: int) -> void:
 	var peer_id: int = _player_to_peer[player_id]
 	if peer_id <= 0:
 		return  # vacante o desconectado
-	if peer_id == _network.local_peer_id():
-		# El host es ese jugador: no enviar RPC a sí mismo (la UI lee directo).
-		return
 	var ids := PackedInt32Array()
 	for c in match_state.hands[player_id]:
 		ids.append((c as Card).id)

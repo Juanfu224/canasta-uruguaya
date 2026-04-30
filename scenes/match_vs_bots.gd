@@ -36,18 +36,14 @@ func _ready() -> void:
 	var nick: String = ProfileStore.nickname if not ProfileStore.nickname.is_empty() else "Tú"
 	server.setup(auth, MatchConfig.standard_2v2(RngService.current_match_seed), nick, ProfileStore.uuid)
 
-	# Asignar bots a los slots restantes (1..n).
-	var max_p: int = mini(n_bots, server._config.n_players - 1)
-	for i in range(1, max_p + 1):
-		server.assign_bot(i, bot_level)
-
 	# Crear ClientView local del jugador humano (slot 0).
 	var client_view := ClientView.new()
 	client_view.name = "ClientView"
 	add_child(client_view)
 	client_view.setup(auth, server.rpc_router, 0)
 
-	# Reparentar a la escena Match.tscn.
+	# Reparentar a la escena Match.tscn ANTES de iniciar la partida, para que
+	# la UI esté lista al recibir el snapshot inicial.
 	var packed: PackedScene = load(MATCH_PATH) as PackedScene
 	if packed == null:
 		push_error("MatchVsBots: no existe %s" % MATCH_PATH)
@@ -59,4 +55,15 @@ func _ready() -> void:
 
 	get_tree().root.add_child(match_scene)
 	get_tree().current_scene = match_scene
+
+	# Esperar un frame para que `_ready()` de Match.gd termine y conecte
+	# señales antes de que `assign_bot` pueda disparar `start_match`.
+	await get_tree().process_frame
+
+	# Asignar bots a los slots restantes (1..n). Si todos los slots quedan
+	# llenos, ServerMatch.assign_bot dispara start_match() internamente.
+	var max_p: int = mini(n_bots, server._config.n_players - 1)
+	for i in range(1, max_p + 1):
+		server.assign_bot(i, bot_level)
+
 	queue_free()

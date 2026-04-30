@@ -29,6 +29,7 @@ extends Control
 
 signal card_added(card_id: int)
 signal card_removed(card_id: int)
+signal card_tapped(card_id: int)
 
 # ---------------------------------------------------------------------------
 # Configuración
@@ -163,6 +164,75 @@ func remove_card_by_id(card_id: int, animate: bool = true) -> bool:
 	return false
 
 
+## Sincroniza la mano con `new_cards` reusando CardUI existentes via diff por
+## `card.id`. Las cartas que dejan de estar se devuelven al pool y las nuevas
+## se adquieren de él. Sólo hace un único relayout final.
+func set_cards(new_cards: Array[Card]) -> void:
+	var wanted_ids: Dictionary = {}
+	for c in new_cards:
+		if c != null:
+			wanted_ids[c.id] = c
+
+	# Eliminar cartas que ya no están en new_cards.
+	var i: int = _cards.size() - 1
+	while i >= 0:
+		var node: CardUI = _cards[i]
+		var cur_id: int = -1
+		if node != null and node.card != null:
+			cur_id = node.card.id
+		if cur_id < 0 or not wanted_ids.has(cur_id):
+			_cards.remove_at(i)
+			_release_card_node(node)
+			if cur_id >= 0:
+				card_removed.emit(cur_id)
+		i -= 1
+
+	# Cartas existentes (por id) en orden actual.
+	var present_ids: Dictionary = {}
+	for n in _cards:
+		if n != null and n.card != null:
+			present_ids[n.card.id] = true
+
+	# Añadir nuevas cartas en el orden de `new_cards`.
+	for c in new_cards:
+		if c == null:
+			continue
+		if present_ids.has(c.id):
+			continue
+		var node: CardUI = _acquire_card_node()
+		node.bind(c, face_up)
+		node.position = size * 0.5 - CardUI.CARD_SIZE * 0.5
+		_cards.append(node)
+		_connect_card_signals(node)
+		card_added.emit(c.id)
+
+	relayout(true)
+
+
+## Ajusta la cantidad de cartas-dorso (RemoteHand). No requiere `Card`
+## reales; usa cartas placeholder estables (id < 0) reusables del pool.
+func set_card_count(n: int) -> void:
+	var cur: int = _cards.size()
+	if n == cur:
+		return
+	if n < cur:
+		for _i in (cur - n):
+			var node: CardUI = _cards.pop_back()
+			_release_card_node(node)
+		relayout(true)
+		return
+	var to_add: int = n - cur
+	for j in to_add:
+		var placeholder: Card = Card.new()
+		placeholder.id = -1 - (cur + j)
+		var node: CardUI = _acquire_card_node()
+		node.bind(placeholder, face_up)
+		node.position = size * 0.5 - CardUI.CARD_SIZE * 0.5
+		_cards.append(node)
+		_connect_card_signals(node)
+	relayout(true)
+
+
 # ---------------------------------------------------------------------------
 # Pool helpers
 # ---------------------------------------------------------------------------
@@ -188,6 +258,8 @@ func _release_card_node(node: CardUI) -> void:
 	# Desconectar señales previas y limpiar estado.
 	if node.drag_ended.is_connected(_on_card_drag_ended):
 		node.drag_ended.disconnect(_on_card_drag_ended)
+	if node.tapped.is_connected(_on_card_tapped):
+		node.tapped.disconnect(_on_card_tapped)
 	node.reset_for_pool()
 	if _pool.size() < _MAX_POOL:
 		_pool.append(node)
@@ -303,6 +375,12 @@ func _on_layout_settled() -> void:
 
 func _connect_card_signals(node: CardUI) -> void:
 	node.drag_ended.connect(_on_card_drag_ended)
+	if not node.tapped.is_connected(_on_card_tapped):
+		node.tapped.connect(_on_card_tapped)
+
+
+func _on_card_tapped(card_id: int) -> void:
+	card_tapped.emit(card_id)
 
 
 func _on_card_drag_ended(_card_id: int) -> void:

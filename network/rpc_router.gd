@@ -146,31 +146,31 @@ func request_pass_play() -> void:
 # HOST → CLIENTS: notificaciones de cambios autoritativos.
 # ---------------------------------------------------------------------------
 
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_local", "reliable")
 func notify_action_resolved(kind: String, payload: Dictionary, revision: int) -> void:
 	var cv: Node = get_meta("client_view", null)
 	if cv != null:
 		cv.on_action_resolved(kind, payload, revision)
 
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_local", "reliable")
 func notify_rule_rejected(kind: String, reason: String) -> void:
 	var cv: Node = get_meta("client_view", null)
 	if cv != null:
 		cv.on_rule_rejected(kind, reason)
 
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_local", "reliable")
 func notify_turn_advanced(new_current_player: int, phase: String) -> void:
 	var cv: Node = get_meta("client_view", null)
 	if cv != null:
 		cv.on_turn_advanced(new_current_player, phase)
 
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_local", "reliable")
 func client_set_private_hand(card_ids: PackedInt32Array, revision: int) -> void:
 	var cv: Node = get_meta("client_view", null)
 	if cv != null:
 		cv.on_private_hand(card_ids, revision)
 
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_local", "reliable")
 func client_load_snapshot(snapshot_bytes: PackedByteArray) -> void:
 	var cv: Node = get_meta("client_view", null)
 	if cv != null:

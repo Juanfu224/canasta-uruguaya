@@ -100,11 +100,12 @@ func _on_offline_pressed() -> void:
 	var transition: LoadingFluid = LOADING_FLUID_SCENE.instantiate() as LoadingFluid
 	add_child(transition)
 	await transition.play_in(0.4)
-	# Cambio de escena. Tras change_scene_to_file el nodo Menu (junto a la
-	# transición) será liberado, así que no hace falta queue_free explícito.
-	var err: int = get_tree().change_scene_to_file(MATCH_OFFLINE_PATH)
+	# El botón "Offline" lleva a una partida vs bots autoritativa (host local).
+	# La escena de QA visual `MatchOffline.tscn` queda detrás del flag
+	# `--match-offline-qa` para evitar exponer un flujo no productivo.
+	var err: int = get_tree().change_scene_to_file(MATCH_VS_BOTS_PATH)
 	if err != OK:
-		push_error("Menu: no se pudo cargar %s (err=%d)" % [MATCH_OFFLINE_PATH, err])
+		push_error("Menu: no se pudo cargar %s (err=%d)" % [MATCH_VS_BOTS_PATH, err])
 		_btn_offline.disabled = false
 		await transition.play_out(0.4)
 		transition.queue_free()

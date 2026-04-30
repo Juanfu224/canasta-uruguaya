@@ -4,14 +4,14 @@
 ## el Lobby con `ServerMatch` y/o `ClientView` ya configurados como hijos.
 ##
 ## Flujo de UI:
-##   - Eventos del usuario (drag&drop, tap mazo) → llamamos a
+##   - Eventos del usuario (drag&drop, tap mazo, botones) → llamamos a
 ##     `client_view.request_*` que hace RPC al host.
 ##   - Notificaciones del host (`action_resolved`, `private_hand_updated`,
 ##     `turn_advanced`, `rule_rejected`) → refrescamos UI.
 ##
 ## El host también juega: tiene su propio `ClientView` que conecta a su
-## `RpcRouter` local. La diferencia con un peer es que las RPCs se ejecutan
-## sin viajar por red (Godot las invoca localmente).
+## `RpcRouter` local. Las RPCs marcadas como `call_local` se invocan también
+## en el peer 1, evitando ramas especiales.
 extends Control
 
 const _SCORE_POPUP_SCENE: PackedScene = preload("res://ui/score_popup.tscn")
@@ -24,11 +24,16 @@ const _LOADING_FLUID_SCENE: PackedScene = preload("res://ui/transitions/loading_
 @onready var _pozo: PozoView = $Center/PozoView
 @onready var _deck: DeckView = $Center/DeckView
 @onready var _melds: MeldsTable = $Top/MeldsTable
-@onready var _info: Label = $InfoLabel
+@onready var _top_hud: TopHud = $HudLayer/TopHud
+@onready var _bottom_hud: BottomHud = $HudLayer/BottomHud
+@onready var _btn_pasar: Button = $BottomActionBar/BtnPasar
+@onready var _btn_capturar: Button = $BottomActionBar/BtnCapturar
+@onready var _btn_cerrar: Button = $BottomActionBar/BtnCerrar
 
 var _server: ServerMatch = null
 var _client_view: ClientView = null
 var _is_host: bool = false
+var _selected_card_ids: PackedInt32Array = PackedInt32Array()
 
 
 func _ready() -> void:
@@ -45,6 +50,14 @@ func _ready() -> void:
 	_deck.draw_requested.connect(_on_draw_requested)
 	_melds.create_meld_requested.connect(_on_create_meld_requested)
 	_melds.extend_meld_requested.connect(_on_extend_meld_requested)
+	_local_hand.card_tapped.connect(_on_card_tapped)
+	_btn_pasar.pressed.connect(_on_btn_pasar_pressed)
+	_btn_capturar.pressed.connect(_on_btn_capturar_pressed)
+	_btn_cerrar.pressed.connect(_on_btn_cerrar_pressed)
+	if _bottom_hud != null:
+		_bottom_hud.back_pressed.connect(_on_back_pressed)
+	if _top_hud != null:
+		_top_hud.menu_pressed.connect(_on_back_pressed)
 	# Conectar señales del client_view.
 	_client_view.snapshot_loaded.connect(_on_snapshot_loaded)
 	_client_view.private_hand_updated.connect(_on_private_hand_updated)
@@ -55,6 +68,7 @@ func _ready() -> void:
 	# Si el host, ya tenemos match_state. Forzar refresh inicial.
 	if _is_host and _server != null and _server.match_state != null:
 		_redraw_full()
+	_update_action_buttons()
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +117,74 @@ func _infer_rank_from_local(card_id: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Selección de cartas y botones de acción
+# ---------------------------------------------------------------------------
+
+func _on_card_tapped(card_id: int) -> void:
+	# Toggle selección.
+	var idx: int = _selected_card_ids.find(card_id)
+	if idx >= 0:
+		_selected_card_ids.remove_at(idx)
+	else:
+		_selected_card_ids.append(card_id)
+	_update_card_selection_visuals()
+	_update_action_buttons()
+
+
+func _update_card_selection_visuals() -> void:
+	const SELECTED_TINT: Color = Color(1.4, 1.2, 0.4, 1.0)
+	for child in _local_hand.get_children():
+		var cu: CardUI = child as CardUI
+		if cu == null or cu.card == null:
+			continue
+		if _selected_card_ids.find(cu.card.id) >= 0:
+			cu.modulate = SELECTED_TINT
+		else:
+			cu.modulate = Color.WHITE
+
+
+func _update_action_buttons() -> void:
+	var phase: String = ""
+	var local_turn: bool = false
+	if _client_view != null:
+		phase = _client_view.current_phase
+		local_turn = _client_view.is_local_turn()
+	# Pasar: visible siempre que sea tu turno en PlayPhase, sin requerir selección.
+	_btn_pasar.disabled = not (local_turn and phase == "PlayPhase")
+	# Capturar: requiere PlayPhase + cartas seleccionadas para reclamar.
+	_btn_capturar.disabled = not (
+		local_turn and phase == "PlayPhase" and _selected_card_ids.size() > 0
+	)
+	# Cerrar: requiere PlayPhase y turno local.
+	_btn_cerrar.disabled = not (local_turn and phase == "PlayPhase")
+
+
+func _on_btn_pasar_pressed() -> void:
+	if _client_view == null:
+		return
+	_client_view.rpc_router.client_request_pass_play()
+
+
+func _on_btn_capturar_pressed() -> void:
+	if _client_view == null or _selected_card_ids.size() == 0:
+		return
+	_client_view.request_capture(_selected_card_ids.duplicate())
+	_selected_card_ids = PackedInt32Array()
+	_update_card_selection_visuals()
+	_update_action_buttons()
+
+
+func _on_btn_cerrar_pressed() -> void:
+	if _client_view == null:
+		return
+	_client_view.request_close()
+
+
+func _on_back_pressed() -> void:
+	get_tree().change_scene_to_file.call_deferred("res://scenes/Menu.tscn")
+
+
+# ---------------------------------------------------------------------------
 # Notificaciones host → UI
 # ---------------------------------------------------------------------------
 
@@ -113,17 +195,18 @@ func _on_snapshot_loaded(_state: MatchState) -> void:
 func _on_private_hand_updated(_card_ids: PackedInt32Array) -> void:
 	_redraw_local_hand()
 	_update_info()
+	_update_action_buttons()
 
 
 func _on_turn_advanced(current_player: int, phase: String) -> void:
-	_info.text = "Turno: jugador %d  |  Fase: %s" % [current_player, phase]
+	_show_toast("Turno: J%d  |  Fase: %s" % [current_player, phase])
+	_redraw_remote_counts()
+	_update_info()
+	_update_action_buttons()
 
 
 func _on_action_resolved(_kind: String, _payload: Dictionary, _revision: int) -> void:
-	# Refrescar lo visible: pozo y melds derivados del state local.
-	_redraw_pozo()
-	_redraw_melds()
-	_update_info()
+	_redraw_full()
 
 
 func _on_rule_rejected(kind: String, reason: String) -> void:
@@ -140,6 +223,7 @@ func _redraw_full() -> void:
 	_redraw_melds()
 	_redraw_remote_counts()
 	_update_info()
+	_update_action_buttons()
 
 
 func _redraw_local_hand() -> void:
@@ -149,11 +233,19 @@ func _redraw_local_hand() -> void:
 	var pid: int = _client_view.local_player_id
 	if pid < 0 or pid >= state.hands.size():
 		return
-	# Limpiar y reconstruir.
-	for child in _local_hand.get_children():
-		child.queue_free()
+	var hand: Array[Card] = []
 	for c in state.hands[pid]:
-		_local_hand.add_card(c, false)
+		hand.append(c)
+	_local_hand.set_cards(hand)
+	# Limpiar selección de cartas que ya no estén en mano.
+	var still_present: PackedInt32Array = PackedInt32Array()
+	for cid in _selected_card_ids:
+		for c in hand:
+			if c.id == cid:
+				still_present.append(cid)
+				break
+	_selected_card_ids = still_present
+	_update_card_selection_visuals()
 
 
 func _redraw_pozo() -> void:
@@ -182,9 +274,26 @@ func _redraw_melds() -> void:
 
 
 func _redraw_remote_counts() -> void:
-	# F5: en este iteración rendereamos las manos remotas vacías (sólo el
-	# layout queda visible). En F6 se reemplaza por dorso real con conteo.
-	pass
+	var state: MatchState = _client_view.match_state
+	if state == null:
+		return
+	var local_pid: int = _client_view.local_player_id
+	var n_players: int = state.hands.size()
+	# Mapeo relativo al jugador local en mesa 4 jugadores: derecha=+1, frente=+2,
+	# izquierda=+3 (módulo n_players).
+	for offset in range(1, n_players):
+		var pid: int = (local_pid + offset) % n_players
+		var count: int = (state.hands[pid] as Array).size()
+		var target: HandLayout = null
+		match offset:
+			1:
+				target = _remote_hand_right
+			2:
+				target = _remote_hand_top
+			3:
+				target = _remote_hand_left
+		if target != null:
+			target.set_card_count(count)
 
 
 func _update_info() -> void:
@@ -193,9 +302,22 @@ func _update_info() -> void:
 		return
 	var deck_size: int = state.deck.size() if state.deck != null else 0
 	var pozo_count: int = state.pozo.pile.size() if state.pozo != null else 0
-	_info.text = "Mazo: %d | Pozo: %d | Turno: J%d (%s)" % [
-		deck_size, pozo_count, state.current_player, _client_view.current_phase,
-	]
+	var local_pid: int = _client_view.local_player_id
+	var local_hand_size: int = 0
+	if local_pid >= 0 and local_pid < state.hands.size():
+		local_hand_size = (state.hands[local_pid] as Array).size()
+	if _bottom_hud != null:
+		_bottom_hud.set_counts(deck_size, pozo_count, local_hand_size)
+		_bottom_hud.set_hint("Turno: J%d (%s)" % [state.current_player, _client_view.current_phase])
+	if _top_hud != null:
+		_top_hud.set_phase(_client_view.current_phase, _client_view.current_phase)
+		# Actualizar marcadores de equipo.
+		for team in state.teams:
+			var ts: TeamState = team as TeamState
+			if ts == null:
+				continue
+			var threshold: int = OpeningThreshold.required_for(ts.cumulative_score)
+			_top_hud.set_team_threshold(ts.team_id, ts.cumulative_score, threshold)
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +325,6 @@ func _update_info() -> void:
 # ---------------------------------------------------------------------------
 
 func _show_toast(msg: String) -> void:
-	# Mínimo viable: actualizar info bar y log.
-	_info.text = msg
+	if _bottom_hud != null:
+		_bottom_hud.set_hint(msg)
 	print("[Match] toast: %s" % msg)
