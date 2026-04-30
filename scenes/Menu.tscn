@@ -1,9 +1,7 @@
-[gd_scene format=3 uid="uid://c6rrdt7ietjku"]
+[gd_scene load_steps=3 format=3 uid="uid://c6rrdt7ietjku"]
 
 [ext_resource type="Script" path="res://scenes/menu.gd" id="1_menu"]
-
-[sub_resource type="StyleBoxFlat" id="SBox_MenuBg"]
-bg_color = Color(0.07, 0.10, 0.14, 1)
+[ext_resource type="PackedScene" path="res://ui/background/felt_background.tscn" id="2_felt"]
 
 [sub_resource type="StyleBoxFlat" id="SBox_SettingsPanel"]
 bg_color = Color(0.12, 0.16, 0.20, 0.98)
@@ -24,13 +22,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_menu")
 
-[node name="Bg" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-theme_override_styles/panel = SubResource("SBox_MenuBg")
-mouse_filter = 1
+[node name="Bg" parent="." instance=ExtResource("2_felt")]
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1

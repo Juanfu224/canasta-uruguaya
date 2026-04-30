@@ -92,12 +92,15 @@ func _make_team_block(team_data: Dictionary) -> VBoxContainer:
 	var header: Label = Label.new()
 	header.text = team_data.get("label", "Equipo %d" % int(team_data.get("team_id", 0)))
 	header.add_theme_font_size_override("font_size", 22)
-	header.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
+	header.add_theme_color_override("font_color", Tokens.TRIM_GOLD)
 	block.add_child(header)
 
 	var rows: Array = team_data.get("rows", [])
-	for row: Dictionary in rows:
-		block.add_child(_make_score_row(row.get("label", "?"), int(row.get("value", 0))))
+	for r: Dictionary in rows:
+		block.add_child(_make_score_row(
+			String(r.get("label", "")),
+			int(r.get("value", 0))
+		))
 
 	# Línea total mano.
 	block.add_child(_make_separator())

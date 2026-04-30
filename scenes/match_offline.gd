@@ -1,37 +1,43 @@
-## Escena offline de partida para QA visual de F3.
+## Escena offline de partida (F4.5 visual rebuild).
 ##
-## Esta NO es la versión final del Match. Aquí el host autoritativo aún
-## no existe (eso llega en F5). Se usa para verificar a ojo:
-##   - Fanning de 11 a 20 cartas sin solapamiento ilegible.
-##   - Drag&drop táctil hacia pozo y melds.
-##   - Layout responsive en viewport portrait 720x1280.
+## Estructura del árbol:
+##   - FeltLayer  (z=0): fondo procedural con vignette + frame dorado.
+##   - PlayArea   (z=normal): manos, mazo, pozo, mesa de canastas.
+##   - HudLayer   (z=1): TopHud (equipos / fase) + BottomHud (hint / menú).
+##   - OverlayLayer (z=2): popups (puntajes, fin de mano, transiciones).
 ##
-## Acciones:
-##   - Tap en el mazo central → robo doble (mueve 2 cartas a la mano local).
-##   - Drop sobre el pozo → descarta una carta.
-##   - Drop sobre la mesa de melds → crea o extiende un meld (estético).
-##
-## NOTA: cualquier acción aquí se ejecuta directamente sobre el estado local.
-## En F5 todas estas acciones se sustituyen por `request_*` RPCs validados
-## por el host.
+## La lógica autoritativa real llega en F5 (RpcRouter); aquí cada acción
+## muta el estado local directamente para QA visual:
+##   - Tap en el mazo  → robo doble.
+##   - Drop en el pozo → descartar carta (taponado/cruzado por estado).
+##   - Drop en mesa    → crear/extender meld; canasta a las 7 cartas.
 extends Control
 
 const _INITIAL_HAND_SIZE: int = 11
 const _SCORE_POPUP_SCENE: PackedScene = preload("res://ui/score_popup.tscn")
 const _LOADING_FLUID_SCENE: PackedScene = preload("res://ui/transitions/loading_fluid.tscn")
+const _MATCH_LAYOUT_SCRIPT: GDScript = preload("res://scenes/match_layout.gd")
+const _CANASTA_FLASH_SCRIPT: GDScript = preload("res://fx/canasta_flash.gd")
+const _CARD_FLIGHT_SCRIPT: GDScript = preload("res://fx/card_flight.gd")
+const _CARD_UI_SCENE: PackedScene = preload("res://ui/card_ui.tscn")
 
-@onready var _local_hand: HandLayout = $LocalHand
-@onready var _remote_hand_top: HandLayout = $RemoteHandTop
-@onready var _remote_hand_left: HandLayout = $RemoteHandLeft
-@onready var _remote_hand_right: HandLayout = $RemoteHandRight
-@onready var _pozo: PozoView = $Center/PozoView
-@onready var _deck: DeckView = $Center/DeckView
-@onready var _melds: MeldsTable = $Top/MeldsTable
-@onready var _info: Label = $InfoLabel
+@onready var _play_area: Control = $PlayArea
+@onready var _local_hand: HandLayout = $PlayArea/LocalHand
+@onready var _remote_hand_top: HandLayout = $PlayArea/RemoteHandTop
+@onready var _remote_hand_left: HandLayout = $PlayArea/RemoteHandLeft
+@onready var _remote_hand_right: HandLayout = $PlayArea/RemoteHandRight
+@onready var _pozo: PozoView = $PlayArea/Center/PozoView
+@onready var _deck: DeckView = $PlayArea/Center/DeckView
+@onready var _center: Control = $PlayArea/Center
+@onready var _melds: MeldsTable = $PlayArea/MeldsTable
+@onready var _top_hud: TopHud = $HudLayer/TopHud
+@onready var _bottom_hud: BottomHud = $HudLayer/BottomHud
+@onready var _overlay: CanvasLayer = $OverlayLayer
 
 var _deck_logic: Deck = null
 var _pozo_count: int = 0
 var _visible_melds: Array[Meld] = []
+var _layout: MatchLayout = null
 
 
 func _ready() -> void:
@@ -40,84 +46,45 @@ func _ready() -> void:
 	_deck_logic = Deck.build_standard_108()
 	_deck_logic.shuffle(RngService.match_rng)
 
+	# Wire signals.
 	_pozo.discard_requested.connect(_on_discard_requested)
 	_deck.draw_requested.connect(_on_draw_requested)
 	_melds.create_meld_requested.connect(_on_create_meld_requested)
 	_melds.extend_meld_requested.connect(_on_extend_meld_requested)
+	_top_hud.menu_pressed.connect(_on_back_to_menu)
+	_bottom_hud.back_pressed.connect(_on_back_to_menu)
+
+	# Layout responsive (portrait/landscape).
+	_layout = _MATCH_LAYOUT_SCRIPT.new() as MatchLayout
+	_layout.bind_nodes(
+		self,
+		_local_hand,
+		_remote_hand_top,
+		_remote_hand_left,
+		_remote_hand_right,
+		_center,
+		_melds,
+	)
+	add_child(_layout)
+
+	# Inicializa HUD.
+	_top_hud.set_round(1, 4)
+	_top_hud.set_phase("Robar", "draw")
 
 	_deal_initial_hands()
-	_update_info()
-	_build_qa_toolbar()
+	_deck.set_glow(true)
+	_refresh_hud()
 
 
 # ---------------------------------------------------------------------------
-# QA Toolbar (F4): sólo en escena offline. En F5 se reemplaza por HUD real.
+# Acciones del jugador (acopladas al estado local; F5 reemplaza por RPC).
 # ---------------------------------------------------------------------------
-
-func _build_qa_toolbar() -> void:
-	var bar: HBoxContainer = HBoxContainer.new()
-	bar.name = "QAToolbar"
-	bar.position = Vector2(16, 16)
-	bar.add_theme_constant_override("separation", 8)
-	add_child(bar)
-
-	var btn_menu: Button = Button.new()
-	btn_menu.text = "← Menú"
-	btn_menu.custom_minimum_size = Vector2(110, 40)
-	btn_menu.pressed.connect(_on_back_to_menu)
-	bar.add_child(btn_menu)
-
-	var btn_score: Button = Button.new()
-	btn_score.text = "Test puntaje"
-	btn_score.custom_minimum_size = Vector2(140, 40)
-	btn_score.pressed.connect(_on_test_score_popup)
-	bar.add_child(btn_score)
-
 
 func _on_back_to_menu() -> void:
 	var transition: LoadingFluid = _LOADING_FLUID_SCENE.instantiate() as LoadingFluid
-	add_child(transition)
+	_overlay.add_child(transition)
 	await transition.play_in(0.4)
 	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
-
-
-func _on_test_score_popup() -> void:
-	var popup: ScorePopup = _SCORE_POPUP_SCENE.instantiate() as ScorePopup
-	add_child(popup)
-	var payload: Dictionary = {
-		"title": "Resultado de la mano (demo)",
-		"teams": [
-			{
-				"team_id": 1,
-				"label": "Equipo Rojo",
-				"rows": [
-					{"label": "Canasta pura", "value": GameConfig.CANASTA_PURE_BONUS},
-					{"label": "Canasta impura", "value": GameConfig.CANASTA_IMPURE_BONUS},
-					{"label": "Canasta de ases pura", "value": GameConfig.CANASTA_ACES_PURE_BONUS},
-					{"label": "Treses rojos (3)", "value": GameConfig.RED_THREE_BONUS * 3},
-					{"label": "Cartas en mesa", "value": 285},
-					{"label": "Cartas en mano", "value": -120},
-				],
-				"hand_total": 1965,
-				"cumulative_before": 1500,
-				"cumulative_after": 3465,
-			},
-			{
-				"team_id": 2,
-				"label": "Equipo Azul",
-				"rows": [
-					{"label": "Canasta impura", "value": GameConfig.CANASTA_IMPURE_BONUS},
-					{"label": "Cartas en mesa", "value": 140},
-					{"label": "Robo fuera de orden", "value": GameConfig.DRAW_OUT_OF_ORDER_PENALTY},
-					{"label": "Cartas en mano", "value": -260},
-				],
-				"hand_total": -20,
-				"cumulative_before": 1820,
-				"cumulative_after": 1800,
-			},
-		],
-	}
-	popup.play(payload)
 
 
 func _deal_initial_hands() -> void:
@@ -132,17 +99,26 @@ func _deal_initial_hands() -> void:
 
 func _on_draw_requested() -> void:
 	var drawn: Array[Card] = _deck_logic.draw_n(GameConfig.DRAW_COUNT_PER_TURN)
+	var origin: Vector2 = _deck.get_draw_origin_global()
+	var destination: Vector2 = _local_hand.get_global_rect().get_center()
 	for c in drawn:
+		_fly_ghost_card(c, origin, destination, 120.0, 0.32, false)
 		_local_hand.add_card(c, true)
 	_deck.set_count(_deck_logic.size())
-	_update_info()
+	_deck.set_glow(false)
+	_top_hud.set_phase("Jugar", "play")
+	_bottom_hud.set_hint("Arrastra cartas a la mesa para canastrar o al pozo para descartar.")
+	_refresh_hud()
 
 
 func _on_discard_requested(card_id: int, _source: NodePath) -> void:
 	var card: Card = _find_card_in_local_hand(card_id)
 	if card == null:
 		return
+	var origin: Vector2 = _local_hand.get_global_rect().get_center()
+	var destination: Vector2 = _pozo.get_global_rect().get_center()
 	_local_hand.remove_card_by_id(card_id, true)
+	_fly_ghost_card(card, origin, destination, 90.0, 0.30, true)
 	_pozo_count += 1
 	_pozo.set_top_card(card)
 	_pozo.set_count(_pozo_count)
@@ -152,7 +128,10 @@ func _on_discard_requested(card_id: int, _source: NodePath) -> void:
 		_pozo.set_status(PozoView.PozoStatus.CRUZADO)
 	else:
 		_pozo.set_status(PozoView.PozoStatus.NORMAL)
-	_update_info()
+	_top_hud.set_phase("Robar", "draw")
+	_bottom_hud.set_hint("Toca el mazo para robar dos cartas.")
+	_deck.set_glow(true)
+	_refresh_hud()
 
 
 func _on_create_meld_requested(card_id: int, _source: NodePath) -> void:
@@ -171,6 +150,7 @@ func _on_create_meld_requested(card_id: int, _source: NodePath) -> void:
 		m.naturals = 1
 	_visible_melds.append(m)
 	_melds.render_melds(_visible_melds)
+	_refresh_hud()
 
 
 func _on_extend_meld_requested(meld_index: int, card_id: int, _source: NodePath) -> void:
@@ -187,9 +167,12 @@ func _on_extend_meld_requested(meld_index: int, card_id: int, _source: NodePath)
 	else:
 		meld.naturals += 1
 	_melds.render_melds(_visible_melds)
-	# F4: feedback al completar canasta (≥7 cartas).
+	_refresh_hud()
+	# Feedback al completar canasta (≥7 cartas).
 	if meld.cards.size() == 7:
 		ScreenShake.shake(_melds, 10.0, 0.25)
+		_CANASTA_FLASH_SCRIPT.spawn(self, Tokens.TRIM_GOLD)
+		_top_hud.bump_team_score(1, 1500)
 
 
 func _find_card_in_local_hand(card_id: int) -> Card:
@@ -200,9 +183,38 @@ func _find_card_in_local_hand(card_id: int) -> Card:
 	return null
 
 
-func _update_info() -> void:
-	_info.text = "Mazo: %d   |   Mano local: %d   |   Pozo: %d" % [
-		_deck_logic.size(),
-		_local_hand.get_card_count(),
-		_pozo_count,
-	]
+func _refresh_hud() -> void:
+	_bottom_hud.set_counts(_deck_logic.size(), _pozo_count, _local_hand.get_card_count())
+
+
+# ---------------------------------------------------------------------------
+# FX: vuelo de carta-fantasma sobre OverlayLayer.
+# ---------------------------------------------------------------------------
+
+func _fly_ghost_card(
+	card: Card,
+	from_global: Vector2,
+	to_global: Vector2,
+	arc_height: float = 100.0,
+	duration: float = 0.32,
+	face_up: bool = true,
+) -> void:
+	if card == null or _overlay == null:
+		return
+	var ghost: CardUI = _CARD_UI_SCENE.instantiate() as CardUI
+	if ghost == null:
+		return
+	ghost.enable_hover_fx = false
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay.add_child(ghost)
+	ghost.bind(card, face_up)
+	ghost.global_position = from_global - ghost.size * 0.5
+	var target: Vector2 = to_global - ghost.size * 0.5
+	var tween: Tween = _CARD_FLIGHT_SCRIPT.fly(ghost, ghost.global_position, target, duration, arc_height, false)
+	if tween == null:
+		ghost.queue_free()
+		return
+	tween.finished.connect(func() -> void:
+		if is_instance_valid(ghost):
+			ghost.queue_free()
+	)

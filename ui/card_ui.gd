@@ -107,9 +107,36 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# Drag&drop unifica táctil + ratón en Godot 4 si emulate_mouse_from_touch
 	# está desactivado y use_accumulated_input=false (configurado en main.gd).
+	_apply_card_skin()
 	_render_face()
 	if enable_hover_fx and face_up:
 		_attach_hover_oscillator()
+
+
+## Aplica StyleBox tokenizado a la cara (papel) y al dorso (azul/gold).
+## Centraliza el look en `Tokens` para evitar hardcodes en .tscn.
+func _apply_card_skin() -> void:
+	var face_style: StyleBoxFlat = StyleBoxFlat.new()
+	face_style.bg_color = Tokens.PAPER
+	face_style.set_corner_radius_all(Tokens.R_MD)
+	face_style.set_border_width_all(2)
+	face_style.border_color = Tokens.PAPER_DIM.darkened(0.20)
+	face_style.shadow_color = Color(0, 0, 0, 0.45)
+	face_style.shadow_size = 4
+	face_style.shadow_offset = Vector2(0, 2)
+	if _face_panel != null:
+		_face_panel.add_theme_stylebox_override("panel", face_style)
+
+	var back_style: StyleBoxFlat = StyleBoxFlat.new()
+	back_style.bg_color = Tokens.FELT_HI.darkened(0.10)
+	back_style.set_corner_radius_all(Tokens.R_MD)
+	back_style.set_border_width_all(3)
+	back_style.border_color = Tokens.TRIM_GOLD
+	back_style.shadow_color = Color(0, 0, 0, 0.45)
+	back_style.shadow_size = 4
+	back_style.shadow_offset = Vector2(0, 2)
+	if _back_panel != null:
+		_back_panel.add_theme_stylebox_override("panel", back_style)
 
 
 func _attach_hover_oscillator() -> void:
@@ -243,12 +270,16 @@ func _render_face() -> void:
 
 static func _color_for_card(c: Card) -> Color:
 	if c == null:
-		return Color.BLACK
+		return Tokens.INK
 	if c.is_wildcard and c.rank == GameConfig.Rank.JOKER:
-		return Color(0.85, 0.25, 0.25)
+		return Tokens.JOKER_PURPLE
+	if c.is_wildcard and c.rank == GameConfig.Rank.TWO:
+		return Tokens.WILD_TWO_TEAL
+	if c.rank == GameConfig.Rank.THREE and GameConfig.is_red_suit(c.suit):
+		return Tokens.RED_THREE_GLOW
 	if GameConfig.is_red_suit(c.suit):
-		return Color(0.78, 0.15, 0.15)
-	return Color(0.10, 0.10, 0.12)
+		return Tokens.RED_SUIT
+	return Tokens.BLACK_SUIT
 
 
 func _build_drag_preview() -> Control:

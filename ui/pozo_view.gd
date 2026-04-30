@@ -67,11 +67,11 @@ func set_status(status: int) -> void:
 	var col: Color
 	match status:
 		PozoStatus.TAPONADO:
-			col = Color(0.85, 0.20, 0.20, 0.85)
+			col = Tokens.STATE_DANGER
 		PozoStatus.CRUZADO:
-			col = Color(0.92, 0.78, 0.20, 0.85)
+			col = Tokens.TRIM_GOLD
 		_:
-			col = Color(0.40, 0.40, 0.45, 0.50)
+			col = Tokens.TRIM_GOLD_DIM
 	_border_style.border_color = col
 	_status_border.queue_redraw()
 

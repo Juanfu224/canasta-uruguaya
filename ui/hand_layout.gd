@@ -61,6 +61,11 @@ const _CARD_SCENE: PackedScene = preload("res://ui/card_ui.tscn")
 ## Duración del tween de relayout.
 @export_range(0.05, 1.0, 0.05) var settle_duration: float = 0.25
 
+## Ancho máximo visible que el abanico puede ocupar (px). Si es <=0 se usa
+## `size.x`. Lo setea `match_layout.gd` para evitar overflow al rotar la
+## mano o cuando el viewport es estrecho.
+@export var max_visible_width: float = 0.0
+
 # ---------------------------------------------------------------------------
 # Estado interno
 # ---------------------------------------------------------------------------
@@ -134,9 +139,12 @@ func get_card_count() -> int:
 func relayout(animate: bool = true) -> void:
 	if _cards.is_empty():
 		return
+	var effective_width: float = size.x
+	if max_visible_width > 0.0:
+		effective_width = minf(effective_width, max_visible_width)
 	var transforms: Array = compute_layout(
 		_cards.size(),
-		size.x,
+		effective_width,
 		max_card_spacing,
 		max_fan_angle_deg,
 		arc_height,

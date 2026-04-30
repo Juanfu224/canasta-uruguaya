@@ -1,0 +1,5 @@
+res://ui/hud/bottom_hud.gd
+res://ui/hud/phase_chip.gd
+res://ui/hud/team_badge.gd
+res://ui/hud/top_hud.gd
+res://ui/pozo_view.gd
