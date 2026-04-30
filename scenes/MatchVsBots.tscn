@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b6n1m4p2vsbts"]
+
+[ext_resource type="Script" path="res://scenes/match_vs_bots.gd" id="1_vsbots"]
+
+[node name="MatchVsBots" type="Node"]
+script = ExtResource("1_vsbots")

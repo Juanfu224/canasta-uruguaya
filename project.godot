@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 GameConfig="*res://autoloads/game_config.gd"
 RngService="*res://autoloads/rng_service.gd"
 ProfileStore="*res://autoloads/profile_store.gd"
+Settings="*res://autoloads/settings.gd"
 NetworkAuthority="*res://network/enet_authority.gd"
 MCPScreenshot="*res://addons/godot_mcp/mcp_screenshot_service.gd"
 MCPInputService="*res://addons/godot_mcp/mcp_input_service.gd"
@@ -43,7 +44,6 @@ enabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")
 [input_devices]
 
 buffering/agile_event_flushing=true
-pointing/emulate_touch_from_mouse=true
 pointing/emulate_mouse_from_touch=false
 pointing/ios/touch_delay=0.0
 
@@ -53,6 +53,5 @@ pointing/ios/touch_delay=0.0
 
 [rendering]
 
-textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"

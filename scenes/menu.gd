@@ -13,6 +13,7 @@ class_name Menu
 extends Control
 
 const MATCH_OFFLINE_PATH: String = "res://scenes/MatchOffline.tscn"
+const MATCH_VS_BOTS_PATH: String = "res://scenes/MatchVsBots.tscn"
 const LOBBY_PATH: String = "res://scenes/Lobby.tscn"
 const LOADING_FLUID_SCENE: PackedScene = preload("res://ui/transitions/loading_fluid.tscn")
 const SQUISHY_TOGGLE_SCENE: PackedScene = preload("res://ui/squishy_toggle.tscn")
@@ -20,6 +21,7 @@ const SQUISHY_TOGGLE_SCENE: PackedScene = preload("res://ui/squishy_toggle.tscn"
 @onready var _title: Label = $Center/VBox/Title
 @onready var _nickname_label: Label = $Center/VBox/NickRow/NicknameLabel
 @onready var _btn_offline: Button = $Center/VBox/BtnOffline
+@onready var _btn_vs_bots: Button = $Center/VBox/BtnVsBots
 @onready var _btn_online: Button = $Center/VBox/BtnOnline
 @onready var _btn_tutorial: Button = $Center/VBox/BtnTutorial
 @onready var _btn_settings: Button = $Center/VBox/BtnSettings
@@ -36,6 +38,7 @@ var _toggle_reduce_motion: SquishyToggle = null
 func _ready() -> void:
 	_nickname_label.text = ProfileStore.nickname
 	_btn_offline.pressed.connect(_on_offline_pressed)
+	_btn_vs_bots.pressed.connect(_on_vs_bots_pressed)
 	_btn_online.pressed.connect(_on_online_pressed)
 	_btn_tutorial.pressed.connect(_on_tutorial_pressed)
 	_btn_settings.pressed.connect(_on_settings_pressed)
@@ -113,6 +116,19 @@ func _on_online_pressed() -> void:
 	if err != OK:
 		push_error("Menu: no se pudo cargar %s (err=%d)" % [LOBBY_PATH, err])
 		_btn_online.disabled = false
+
+
+func _on_vs_bots_pressed() -> void:
+	_btn_vs_bots.disabled = true
+	var transition: LoadingFluid = LOADING_FLUID_SCENE.instantiate() as LoadingFluid
+	add_child(transition)
+	await transition.play_in(0.4)
+	var err: int = get_tree().change_scene_to_file(MATCH_VS_BOTS_PATH)
+	if err != OK:
+		push_error("Menu: no se pudo cargar %s (err=%d)" % [MATCH_VS_BOTS_PATH, err])
+		_btn_vs_bots.disabled = false
+		await transition.play_out(0.4)
+		transition.queue_free()
 
 
 func _on_tutorial_pressed() -> void:

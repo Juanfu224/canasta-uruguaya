@@ -31,6 +31,7 @@ var _btn_host: Button = null
 var _btn_join_code: Button = null
 var _btn_scan: Button = null
 var _btn_back: Button = null
+var _bots_row: HBoxContainer = null
 
 var _scanned_rooms: Array[Dictionary] = []
 var _join_target_ip: String = ""
@@ -111,6 +112,16 @@ func _build_ui() -> void:
 	_slots_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(_slots_label)
 
+	_bots_row = HBoxContainer.new()
+	_bots_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_bots_row.visible = false
+	vb.add_child(_bots_row)
+	for level in [GameConfig.BotLevel.EASY, GameConfig.BotLevel.NORMAL, GameConfig.BotLevel.HARD]:
+		var b: Button = Button.new()
+		b.text = "+ Bot %s" % _bot_level_label(level)
+		b.pressed.connect(_on_add_bot_pressed.bind(level))
+		_bots_row.add_child(b)
+
 	_btn_back = Button.new()
 	_btn_back.text = "Volver al menú"
 	_btn_back.pressed.connect(_on_back_pressed)
@@ -153,6 +164,7 @@ func _on_host_pressed() -> void:
 	_btn_host.disabled = true
 	_btn_join_code.disabled = true
 	_btn_scan.disabled = true
+	_bots_row.visible = true
 
 
 func _slots_text() -> String:
@@ -161,11 +173,35 @@ func _slots_text() -> String:
 	var lines: Array[String] = []
 	for p in _server._config.n_players:
 		var nick: String = _server._player_nicknames[p] if p < _server._player_nicknames.size() else ""
-		if nick.is_empty():
+		if _server.bot_controller != null and _server.bot_controller.is_bot(p):
+			lines.append("Slot %d: %s [BOT]" % [p, nick])
+		elif nick.is_empty():
 			lines.append("Slot %d: (vacío)" % p)
 		else:
 			lines.append("Slot %d: %s" % [p, nick])
 	return "\n".join(lines)
+
+
+func _bot_level_label(level: int) -> String:
+	match level:
+		GameConfig.BotLevel.EASY: return "Fácil"
+		GameConfig.BotLevel.HARD: return "Difícil"
+		_: return "Normal"
+
+
+func _on_add_bot_pressed(level: int) -> void:
+	if _server == null or not _is_host:
+		return
+	# Buscar primer slot vacío.
+	for p in _server._config.n_players:
+		var peer_id: int = _server._player_to_peer[p]
+		var is_bot: bool = _server.bot_controller != null and _server.bot_controller.is_bot(p)
+		if peer_id == -1 and not is_bot:
+			_server.assign_bot(p, level)
+			_slots_label.text = _slots_text()
+			_discovery.update_advertise_info({"n": _count_filled(), "started": _server._started})
+			return
+	_status_label.text = "No hay slots libres"
 
 
 func _on_player_joined(_pid: int, _peer: int, _nick: String) -> void:
@@ -180,8 +216,10 @@ func _on_player_left(_pid: int) -> void:
 
 func _count_filled() -> int:
 	var c := 0
-	for p in _server._player_to_peer:
-		if p != -1:
+	for p in _server._config.n_players:
+		var peer_id: int = _server._player_to_peer[p]
+		var is_bot: bool = _server.bot_controller != null and _server.bot_controller.is_bot(p)
+		if peer_id != -1 or is_bot:
 			c += 1
 	return c
 

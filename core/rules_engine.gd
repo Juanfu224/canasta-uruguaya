@@ -343,6 +343,19 @@ static func execute_close(state: MatchState, player_id: int, in_hand: bool = fal
 	return RuleResult.success()
 
 
+## Acción "pasar fase de juego": el jugador no quiere/no puede meldear y
+## fuerza la transición PlayPhase → DiscardPhase. La FSM la consume vía
+## `mark_resolved` en `ServerMatch.on_action_resolved`.
+##
+## No muta el estado: sólo valida turno. El caller (RpcRouter) además debe
+## verificar que la fase FSM actual sea PlayPhase para evitar saltarse
+## DrawPhase u otra etapa.
+static func can_pass_play(state: MatchState, player_id: int) -> RuleResult:
+	if player_id != state.current_player:
+		return RuleResult.failure("not_your_turn")
+	return RuleResult.success()
+
+
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------

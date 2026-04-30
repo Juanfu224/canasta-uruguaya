@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://b7p7p7p7p7p7p"]
+
+[ext_resource type="Script" path="res://ui/hud/perf_overlay.gd" id="1_perf"]
+
+[node name="PerfOverlay" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_perf")
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 360.0
+offset_bottom = 36.0
+mouse_filter = 2
+self_modulate = Color(0, 0, 0, 0.55)
+
+[node name="Label" type="Label" parent="Panel"]
+layout_mode = 2
+mouse_filter = 2
+text = "FPS --"

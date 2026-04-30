@@ -67,10 +67,19 @@ const _CARD_SCENE: PackedScene = preload("res://ui/card_ui.tscn")
 @export var max_visible_width: float = 0.0
 
 # ---------------------------------------------------------------------------
+# Pool interno de CardUI
+# ---------------------------------------------------------------------------
+
+## Tope de nodos guardados en el pool por mano. 22-26 es el peor caso real
+## (mano grande tras varios robos). Más allá de eso liberamos memoria.
+const _MAX_POOL: int = 24
+
+# ---------------------------------------------------------------------------
 # Estado interno
 # ---------------------------------------------------------------------------
 
 var _cards: Array[CardUI] = []
+var _pool: Array[CardUI] = []
 var _layout_tween: Tween = null
 var _is_settled: bool = true
 var _time: float = 0.0
@@ -78,11 +87,21 @@ var _time: float = 0.0
 
 func _ready() -> void:
 	clip_contents = false
-	set_process(sine_amplitude > 0.0)
+	_update_process_state()
+
+
+func _exit_tree() -> void:
+	# Drenar el pool para no fugar nodos al cambiar de escena.
+	for n in _pool:
+		if is_instance_valid(n):
+			n.queue_free()
+	_pool.clear()
 
 
 func _process(delta: float) -> void:
 	if not _is_settled or sine_amplitude <= 0.0 or _cards.is_empty():
+		return
+	if not _breathing_allowed():
 		return
 	_time += delta
 	# Breathing aditivo: NO sobreescribimos el target_position; sumamos un
@@ -97,6 +116,20 @@ func _process(delta: float) -> void:
 		card_node.position = base_pos + Vector2(0.0, bob)
 
 
+# Consulta segura al autoload Settings (None en tests headless ⇒ permitido).
+func _breathing_allowed() -> bool:
+	if not is_inside_tree():
+		return true
+	var n: Node = get_tree().root.get_node_or_null(^"Settings")
+	if n == null:
+		return true
+	return bool(n.call("breathing_allowed"))
+
+
+func _update_process_state() -> void:
+	set_process(sine_amplitude > 0.0)
+
+
 # ---------------------------------------------------------------------------
 # API pública
 # ---------------------------------------------------------------------------
@@ -106,8 +139,7 @@ func add_card(card: Card, animate: bool = true) -> CardUI:
 	if card == null:
 		push_warning("HandLayout.add_card: card es null")
 		return null
-	var node: CardUI = _CARD_SCENE.instantiate() as CardUI
-	add_child(node)
+	var node: CardUI = _acquire_card_node()
 	node.bind(card, face_up)
 	# Spawn en el centro: el relayout lo lleva a su posición final.
 	node.position = size * 0.5 - CardUI.CARD_SIZE * 0.5
@@ -124,11 +156,44 @@ func remove_card_by_id(card_id: int, animate: bool = true) -> bool:
 		var node: CardUI = _cards[i]
 		if node != null and node.card != null and node.card.id == card_id:
 			_cards.remove_at(i)
-			node.queue_free()
+			_release_card_node(node)
 			relayout(animate)
 			card_removed.emit(card_id)
 			return true
 	return false
+
+
+# ---------------------------------------------------------------------------
+# Pool helpers
+# ---------------------------------------------------------------------------
+
+func _acquire_card_node() -> CardUI:
+	var node: CardUI = null
+	while not _pool.is_empty():
+		var candidate: CardUI = _pool.pop_back()
+		if is_instance_valid(candidate):
+			node = candidate
+			break
+	if node == null:
+		node = _CARD_SCENE.instantiate() as CardUI
+		add_child(node)
+	else:
+		node.revive_from_pool()
+	return node
+
+
+func _release_card_node(node: CardUI) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	# Desconectar señales previas y limpiar estado.
+	if node.drag_ended.is_connected(_on_card_drag_ended):
+		node.drag_ended.disconnect(_on_card_drag_ended)
+	node.reset_for_pool()
+	if _pool.size() < _MAX_POOL:
+		_pool.append(node)
+	else:
+		# El pool está lleno: descartar al árbol para liberar memoria.
+		node.queue_free()
 
 
 func get_card_count() -> int:

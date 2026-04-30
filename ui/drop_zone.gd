@@ -51,6 +51,8 @@ func _drop_data(_at: Vector2, data: Variant) -> void:
 	if not _is_valid_payload(data):
 		return
 	var d: Dictionary = data
+	# Háptica de confirmación al jugador local que soltó la carta.
+	Haptics.success()
 	card_dropped.emit(int(d["card_id"]), d["source_path"] as NodePath, accept_kind)
 
 

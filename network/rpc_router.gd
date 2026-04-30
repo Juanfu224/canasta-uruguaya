@@ -56,6 +56,9 @@ func client_request_discard(card_id: int) -> void:
 func client_request_close() -> void:
 	rpc_id(1, "request_close")
 
+func client_request_pass_play() -> void:
+	rpc_id(1, "request_pass_play")
+
 
 # ---------------------------------------------------------------------------
 # HOST-SIDE: handlers
@@ -123,6 +126,20 @@ func request_close() -> void:
 	var in_hand: bool = not team.opened
 	var res: RuleResult = RulesEngine.execute_close(server.match_state, ctx.player_id, in_hand)
 	_finish(ctx, res, "close", {"player_id": ctx.player_id})
+
+
+## Pasa la fase de juego sin bajar meld. SOLO válido durante PlayPhase.
+@rpc("any_peer", "call_remote", "reliable")
+func request_pass_play() -> void:
+	var ctx: Dictionary = _begin_request("pass_play")
+	if ctx.is_empty():
+		return
+	# Sólo aceptar si la FSM está en PlayPhase (evita saltarse DrawPhase).
+	if server.fsm == null or server.fsm.current == null or server.fsm.current.name() != "PlayPhase":
+		_reject(ctx.peer_id, "pass_play", "wrong_phase")
+		return
+	var res: RuleResult = RulesEngine.can_pass_play(server.match_state, ctx.player_id)
+	_finish(ctx, res, "pass_play", {"player_id": ctx.player_id})
 
 
 # ---------------------------------------------------------------------------

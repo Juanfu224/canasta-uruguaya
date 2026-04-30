@@ -109,7 +109,7 @@ func _ready() -> void:
 	# está desactivado y use_accumulated_input=false (configurado en main.gd).
 	_apply_card_skin()
 	_render_face()
-	if enable_hover_fx and face_up:
+	if enable_hover_fx and face_up and _motion_allowed():
 		_attach_hover_oscillator()
 
 
@@ -147,6 +147,50 @@ func _attach_hover_oscillator() -> void:
 	osc.name = "HoverOscillator"
 	osc.hover_scale = hover_scale
 	add_child(osc)
+
+
+# Consulta el autoload Settings de forma segura (puede no existir en tests).
+static func _motion_allowed() -> bool:
+	var loop: MainLoop = Engine.get_main_loop()
+	if loop is SceneTree:
+		var n: Node = (loop as SceneTree).root.get_node_or_null(^"Settings")
+		if n != null:
+			return not bool(n.get("reduce_motion"))
+	return true
+
+
+## Limpia el estado para que el nodo pueda reusarse desde un pool.
+## Tras llamar a `reset_for_pool` el nodo queda invisible y sin signals
+## conectadas; HandLayout debe re-bindear y volver a conectarlo antes de
+## reanimarlo.
+func reset_for_pool() -> void:
+	_card = null
+	_state = InputState.IDLE
+	modulate = Color(1, 1, 1, 1)
+	scale = Vector2.ONE
+	rotation = 0.0
+	_target_position = Vector2.ZERO
+	_target_rotation = 0.0
+	_kill_tween(_settle_tween)
+	_kill_tween(_hover_tween)
+	# Desconectar todas las conexiones externas a las señales del nodo.
+	for sig in [drag_started, drag_ended, tapped]:
+		for conn in sig.get_connections():
+			sig.disconnect(conn["callable"])
+	visible = false
+	set_process(false)
+	set_process_input(false)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## Reverso de `reset_for_pool`: prepara el nodo para volver a montarse.
+func revive_from_pool() -> void:
+	visible = true
+	set_process(true)
+	set_process_input(true)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	modulate = Color(1, 1, 1, 1)
+	scale = Vector2.ONE
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +246,8 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	# Ocultamos la carta en mano mientras dura el drag para no duplicarla
 	# visualmente. Restauramos en _notification(NOTIFICATION_DRAG_END).
 	modulate.a = 0.35
+	# Tap háptico al iniciar arrastre (jugador local).
+	Haptics.tap()
 	drag_started.emit(_card.id)
 	return {
 		"type": DRAG_PAYLOAD_TYPE,
@@ -216,6 +262,9 @@ func _notification(what: int) -> void:
 		if _state == InputState.DRAGGING:
 			_state = InputState.IDLE
 			modulate.a = 1.0
+			# Si el drop no fue aceptado por ninguna DropZone, vibrar error.
+			if not is_drag_successful():
+				Haptics.error()
 			drag_ended.emit(_card.id if _card != null else -1)
 
 

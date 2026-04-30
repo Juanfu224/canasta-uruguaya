@@ -119,6 +119,26 @@ const NET_PORT_DISCOVERY: int = 8911
 const ROOM_CODE_LENGTH: int = 6
 
 # ---------------------------------------------------------------------------
+# IA / Bots (F6)
+# ---------------------------------------------------------------------------
+
+## Niveles de dificultad de los bots heurísticos.
+## - EASY:   descartes ruidosos, nunca captura el pozo.
+## - NORMAL: heurística completa.
+## - HARD:   normal + look-ahead 1-ply en la elección de descarte.
+enum BotLevel { EASY, NORMAL, HARD }
+
+## Tiempo mínimo de "pensamiento" del bot antes de actuar (UX).
+const BOT_THINK_MIN_MS: int = 300
+## Tiempo máximo de "pensamiento" del bot antes de actuar (UX).
+const BOT_THINK_MAX_MS: int = 700
+## Segundos a esperar antes de que un bot tome el slot de un humano caído.
+const BOT_TAKEOVER_TIMEOUT_S: float = 60.0
+## Si está activo, los bots actúan instantáneamente (tests headless / smoke).
+## Lo levantan los runners; producción lo deja false.
+static var bot_instant: bool = false
+
+# ---------------------------------------------------------------------------
 # Helpers estáticos puros
 # ---------------------------------------------------------------------------
 
