@@ -64,7 +64,7 @@ func client_request_pass_play() -> void:
 # HOST-SIDE: handlers
 # ---------------------------------------------------------------------------
 
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_draw() -> void:
 	var ctx: Dictionary = _begin_request("draw")
 	if ctx.is_empty():
@@ -73,7 +73,7 @@ func request_draw() -> void:
 	_finish(ctx, res, "draw", {"player_id": ctx.player_id})
 
 
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_capture_pozo(claim_ids: PackedInt32Array) -> void:
 	var ctx: Dictionary = _begin_request("capture")
 	if ctx.is_empty():
@@ -85,7 +85,7 @@ func request_capture_pozo(claim_ids: PackedInt32Array) -> void:
 	_finish(ctx, res, "capture", {"player_id": ctx.player_id, "claim_ids": claim_ids})
 
 
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_meld(card_ids: PackedInt32Array, declared_rank: int) -> void:
 	var ctx: Dictionary = _begin_request("meld")
 	if ctx.is_empty():
@@ -104,7 +104,7 @@ func request_meld(card_ids: PackedInt32Array, declared_rank: int) -> void:
 	})
 
 
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_discard(card_id: int) -> void:
 	var ctx: Dictionary = _begin_request("discard")
 	if ctx.is_empty():
@@ -116,7 +116,7 @@ func request_discard(card_id: int) -> void:
 	_finish(ctx, res, "discard", {"player_id": ctx.player_id, "card_id": card_id})
 
 
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_close() -> void:
 	var ctx: Dictionary = _begin_request("close")
 	if ctx.is_empty():
@@ -129,7 +129,7 @@ func request_close() -> void:
 
 
 ## Pasa la fase de juego sin bajar meld. SOLO válido durante PlayPhase.
-@rpc("any_peer", "call_remote", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func request_pass_play() -> void:
 	var ctx: Dictionary = _begin_request("pass_play")
 	if ctx.is_empty():
@@ -188,7 +188,8 @@ func _begin_request(kind: String) -> Dictionary:
 		return {}
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	if peer_id == 0:
-		return {}  # Llamada local — ignorar (host no se envía a sí mismo)
+		# Self-call local del host (offline / vs Bots) — usar el id propio.
+		peer_id = multiplayer.get_unique_id()
 	if not _consume_token(peer_id):
 		# Excedió rate limit. Silencioso para no amplificar.
 		push_warning("RpcRouter: rate-limit peer=%d kind=%s" % [peer_id, kind])

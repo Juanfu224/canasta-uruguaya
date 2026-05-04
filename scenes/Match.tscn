@@ -167,6 +167,11 @@ layout_mode = 2
 text = "Pasar"
 disabled = true
 
+[node name="BtnBajarMeld" type="Button" parent="BottomActionBar"]
+layout_mode = 2
+text = "Bajar"
+disabled = true
+
 [node name="BtnCapturar" type="Button" parent="BottomActionBar"]
 layout_mode = 2
 text = "Capturar"

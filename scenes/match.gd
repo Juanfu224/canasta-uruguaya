@@ -27,6 +27,7 @@ const _LOADING_FLUID_SCENE: PackedScene = preload("res://ui/transitions/loading_
 @onready var _top_hud: TopHud = $HudLayer/TopHud
 @onready var _bottom_hud: BottomHud = $HudLayer/BottomHud
 @onready var _btn_pasar: Button = $BottomActionBar/BtnPasar
+@onready var _btn_bajar_meld: Button = $BottomActionBar/BtnBajarMeld
 @onready var _btn_capturar: Button = $BottomActionBar/BtnCapturar
 @onready var _btn_cerrar: Button = $BottomActionBar/BtnCerrar
 
@@ -52,6 +53,7 @@ func _ready() -> void:
 	_melds.extend_meld_requested.connect(_on_extend_meld_requested)
 	_local_hand.card_tapped.connect(_on_card_tapped)
 	_btn_pasar.pressed.connect(_on_btn_pasar_pressed)
+	_btn_bajar_meld.pressed.connect(_on_btn_bajar_meld_pressed)
 	_btn_capturar.pressed.connect(_on_btn_capturar_pressed)
 	_btn_cerrar.pressed.connect(_on_btn_cerrar_pressed)
 	if _bottom_hud != null:
@@ -92,9 +94,12 @@ func _on_discard_requested(card_id: int, _source: NodePath) -> void:
 func _on_create_meld_requested(card_id: int, _source: NodePath) -> void:
 	if not _client_view.is_local_turn():
 		return
-	# Para meld nuevo enviamos sólo esa carta + rank inferido localmente.
-	# El host validará. Para multi-carta meld se requiere UI selector más
-	# complejo (pendiente F6 - mejorada UX).
+	# Si hay >=3 cartas seleccionadas, usar la selección completa para bajar meld nuevo.
+	if _selected_card_ids.size() >= 3:
+		_submit_meld_from_selection()
+		return
+	# Fallback: enviar sólo esa carta (host validará; usar para extender meld
+	# existente cuando ya hay meld del rank declarado en mesa).
 	var rank: int = _infer_rank_from_local(card_id)
 	_client_view.request_meld(PackedInt32Array([card_id]), rank)
 
@@ -151,6 +156,10 @@ func _update_action_buttons() -> void:
 		local_turn = _client_view.is_local_turn()
 	# Pasar: visible siempre que sea tu turno en PlayPhase, sin requerir selección.
 	_btn_pasar.disabled = not (local_turn and phase == "PlayPhase")
+	# Bajar meld: PlayPhase + al menos 3 cartas seleccionadas.
+	_btn_bajar_meld.disabled = not (
+		local_turn and phase == "PlayPhase" and _selected_card_ids.size() >= 3
+	)
 	# Capturar: requiere PlayPhase + cartas seleccionadas para reclamar.
 	_btn_capturar.disabled = not (
 		local_turn and phase == "PlayPhase" and _selected_card_ids.size() > 0
@@ -159,10 +168,37 @@ func _update_action_buttons() -> void:
 	_btn_cerrar.disabled = not (local_turn and phase == "PlayPhase")
 
 
+func _submit_meld_from_selection() -> void:
+	if _client_view == null or _selected_card_ids.size() < 3:
+		return
+	# Inferir rank declarado: primer ID natural; si todas son comodín -> JOKER.
+	var declared: int = -1
+	for cid in _selected_card_ids:
+		var card: Card = CardLookup.get_by_id(cid)
+		if card == null:
+			continue
+		if not card.is_wildcard:
+			declared = card.rank
+			break
+	if declared < 0:
+		declared = GameConfig.Rank.JOKER
+	var payload: PackedInt32Array = _selected_card_ids.duplicate()
+	_client_view.request_meld(payload, declared)
+	_selected_card_ids = PackedInt32Array()
+	_update_card_selection_visuals()
+	_update_action_buttons()
+
+
 func _on_btn_pasar_pressed() -> void:
 	if _client_view == null:
 		return
 	_client_view.rpc_router.client_request_pass_play()
+
+
+func _on_btn_bajar_meld_pressed() -> void:
+	if _client_view == null or _selected_card_ids.size() < 3:
+		return
+	_submit_meld_from_selection()
 
 
 func _on_btn_capturar_pressed() -> void:

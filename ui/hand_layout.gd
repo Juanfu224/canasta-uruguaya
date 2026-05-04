@@ -276,6 +276,13 @@ func get_card_count() -> int:
 func relayout(animate: bool = true) -> void:
 	if _cards.is_empty():
 		return
+	# Si el contenedor aún no tiene tamaño (escena recién montada o resize
+	# pendiente), aplazar el relayout a cuando `resized` se dispare. Sin esto
+	# las cartas quedan apiladas en (0,0).
+	if size.x <= 1.0:
+		if not resized.is_connected(_on_deferred_relayout):
+			resized.connect(_on_deferred_relayout, CONNECT_ONE_SHOT)
+		return
 	var effective_width: float = size.x
 	if max_visible_width > 0.0:
 		effective_width = minf(effective_width, max_visible_width)
@@ -371,6 +378,11 @@ static func compute_layout(
 
 func _on_layout_settled() -> void:
 	_is_settled = true
+
+
+func _on_deferred_relayout() -> void:
+	# Disparado por `resized` cuando teníamos size.x ~ 0 al pedir relayout.
+	relayout(true)
 
 
 func _connect_card_signals(node: CardUI) -> void:
